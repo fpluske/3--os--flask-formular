@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --chat-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --messages-bg: rgba(255, 255, 255, 0.95);
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+            --input-bg: #ffffff;
+            --status-bg: rgba(0,0,0,0.7);
+        }
+        
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --chat-bg: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            --messages-bg: rgba(31, 41, 55, 0.95);
+            --card-bg: #1f2937;
+            --border-color: #374151;
+            --input-bg: #374151;
+            --status-bg: rgba(0,0,0,0.9);
+        }
+        
+        [data-theme="dark"] body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+            min-height: 100vh;
+        }
+        
+        body {
+            background-color: var(--bg-color) !important;
+            color: var(--text-color) !important;
+            transition: all 0.3s ease;
+        }
+        
+        .bg-light {
+            background-color: var(--bg-color) !important;
+        }
+        
+        .container {
+            background-color: transparent;
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        
+        .chat-container {
+            height: 70vh;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--chat-bg);
+            position: relative;
+        }
+        
+        .chat-messages {
+            height: calc(100% - 80px);
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--messages-bg);
+            margin: 10px;
+            border-radius: 8px;
+            scroll-behavior: smooth;
+        }
+        
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        [data-theme="dark"] .chat-messages::-webkit-scrollbar-track {
+            background: #374151;
+        }
+        
+        [data-theme="dark"] .chat-messages::-webkit-scrollbar-thumb {
+            background: #6b7280;
+        }
+        
+        [data-theme="dark"] .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+        
+        .theme-toggle {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-toggle:hover {
+            background: rgba(0,0,0,0.1);
+        }
+        
+        [data-theme="dark"] .theme-toggle:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        [data-theme="dark"] .alert-info {
+            background-color: #1e40af;
+            border-color: #3b82f6;
+            color: #dbeafe;
+        }
+        
+        [data-theme="dark"] .btn-outline-danger {
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+        
+        [data-theme="dark"] .btn-outline-danger:hover {
+            background-color: #ef4444;
+            border-color: #ef4444;
+        }
+        
+        [data-theme="dark"] .btn-outline-info {
+            color: #3b82f6;
+            border-color: #3b82f6;
+        }
+        
+        [data-theme="dark"] .btn-outline-info:hover {
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+        }
+        
+        [data-theme="dark"] h1, 
+        [data-theme="dark"] h2, 
+        [data-theme="dark"] h3, 
+        [data-theme="dark"] h4, 
+        [data-theme="dark"] h5, 
+        [data-theme="dark"] h6 {
+            color: var(--text-color) !important;
+        }
+        
+        [data-theme="dark"] .card-title {
+            color: var(--text-color) !important;
+        }
+        
+        [data-theme="dark"] .card-text {
+            color: #b0b0b0 !important;
+        }
+        
+        [data-theme="dark"] code {
+            background-color: #374151;
+            color: #fbbf24;
+        }
+        
+        [data-theme="dark"] .small {
+            color: #9ca3af !important;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        
+        .message.user {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .message.webhook {
+            background: linear-gradient(45deg, #28a745, #1e7e34);
+            color: white;
+            margin-right: auto;
+        }
+        
+        .message.error {
+            background: linear-gradient(45deg, #dc3545, #bd2130);
+            color: white;
+            margin-right: auto;
+        }
+        
+        .message.loading {
+            background: linear-gradient(45deg, #ffc107, #e0a800);
+            color: #212529;
+            margin-right: auto;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .message-header {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        
+        .message-text {
+            font-size: 1em;
+            line-height: 1.4;
+        }
+        
+        .chat-input-container {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: var(--input-bg);
+            border-radius: 25px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .form-control {
+            background-color: var(--input-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        
+        .form-control:focus {
+            background-color: var(--input-bg);
+            border-color: #007bff;
+            color: var(--text-color);
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .form-control::placeholder {
+            color: var(--text-color);
+            opacity: 0.6;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 10px;
+            text-align: center;
+            font-style: italic;
+            color: #6c757d;
+        }
+        
+        .status-bar {
+            background: var(--status-bg);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px 5px 0 0;
+            margin: 10px 10px 0 10px;
+            font-size: 0.9em;
+        }
+        
+        .raw-data {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 8px;
+            margin-top: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            color: #495057;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-chat-dots"></i> Flask Chat
+                    </h1>
+                    <div>
+                        <button class="theme-toggle me-2" onclick="toggleTheme()" title="Přepnout téma">
+                            <span id="themeIcon">🌙</span>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="clearChat()">
+                            <i class="bi bi-trash"></i> Vymazat chat
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="toggleRawData()">
+                            <i class="bi bi-code"></i> Raw Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="chat-container">
+                    <div class="status-bar">
+                        <i class="bi bi-circle-fill text-success"></i> 
+                        Připojeno k webhook | 
+                        Zpráv v chatu: <span id="messageCount">{{ messages|length }}</span>
+                    </div>
+                    
+                    <div class="chat-messages" id="chatMessages">
+                        {% for msg in messages %}
+                        <div class="message {{ msg.type }}">
+                            <div class="message-header">
+                                <strong>{{ msg.username }}</strong> - {{ msg.timestamp }}
+                            </div>
+                            <div class="message-text">{{ msg.message }}</div>
+                            {% if msg.raw_data %}
+                            <div class="raw-data" style="display: none;">
+                                <strong>Raw Response:</strong><br>
+                                <pre>{{ msg.raw_data | tojson(indent=2) }}</pre>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="typing-indicator" id="typingIndicator">
+                        <i class="bi bi-three-dots"></i> Webhook zpracovává zprávu...
+                    </div>
+                    
+                    <div class="chat-input-container">
+                        <form id="chatForm" class="d-flex gap-2">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="usernameInput" 
+                                   placeholder="Vaše jméno" 
+                                   value="Uživatel"
+                                   style="max-width: 120px;">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="messageInput" 
+                                   placeholder="Napište zprávu..." 
+                                   required>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let showRawData = false;
+        let isProcessing = false;
+        
+        document.getElementById('chatForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (isProcessing) return; // Prevent double submission
+            
+            const messageInput = document.getElementById('messageInput');
+            const usernameInput = document.getElementById('usernameInput');
+            const message = messageInput.value.trim();
+            const username = usernameInput.value.trim() || 'Anonym';
+            
+            if (!message) return;
+            
+            isProcessing = true;
+            
+            // Okamžitě přidej uživatelskou zprávu do UI
+            addMessageToUI({
+                type: 'user',
+                username: username,
+                message: message,
+                timestamp: new Date().toLocaleTimeString('cs-CZ', {hour: '2-digit', minute: '2-digit', second: '2-digit'})
+            });
+            
+            // Přidej loading zprávu
+            const loadingId = addMessageToUI({
+                type: 'loading',
+                username: 'System',
+                message: '⏳ Čekám na odpověď z webhook...',
+                timestamp: new Date().toLocaleTimeString('cs-CZ', {hour: '2-digit', minute: '2-digit', second: '2-digit'})
+            });
+            
+            messageInput.value = '';
+            scrollToBottom();
+            
+            try {
+                const response = await fetch('/send_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        username: username
+                    })
+                });
+                
+                const result = await response.json();
+                
+                // Odeber loading zprávu
+                removeMessageFromUI(loadingId);
+                
+                if (response.ok) {
+                    // Refresh messages z serveru pro sync
+                    await refreshMessages();
+                } else {
+                    // Přidej error zprávu
+                    addMessageToUI({
+                        type: 'error',
+                        username: 'System',
+                        message: '❌ ' + (result.error || 'Neznámá chyba'),
+                        timestamp: new Date().toLocaleTimeString('cs-CZ', {hour: '2-digit', minute: '2-digit', second: '2-digit'})
+                    });
+                }
+            } catch (error) {
+                removeMessageFromUI(loadingId);
+                addMessageToUI({
+                    type: 'error',
+                    username: 'System',
+                    message: '❌ Chyba při odesílání: ' + error.message,
+                    timestamp: new Date().toLocaleTimeString('cs-CZ', {hour: '2-digit', minute: '2-digit', second: '2-digit'})
+                });
+            } finally {
+                isProcessing = false;
+            }
+        });
+        
+        function addMessageToUI(msg) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            messageDiv.className = `message ${msg.type}`;
+            messageDiv.id = messageId;
+            
+            let rawDataHtml = '';
+            if (msg.raw_data) {
+                const rawDataDisplay = showRawData ? 'block' : 'none';
+                rawDataHtml = `
+                    <div class="raw-data" style="display: ${rawDataDisplay};">
+                        <strong>Raw Response:</strong><br>
+                        <pre>${JSON.stringify(msg.raw_data, null, 2)}</pre>
+                    </div>
+                `;
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <strong>${msg.username}</strong> - ${msg.timestamp}
+                </div>
+                <div class="message-text">${msg.message}</div>
+                ${rawDataHtml}
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            updateMessageCount();
+            smartScroll();
+            
+            return messageId;
+        }
+        
+        function removeMessageFromUI(messageId) {
+            const messageElement = document.getElementById(messageId);
+            if (messageElement) {
+                messageElement.remove();
+                updateMessageCount();
+            }
+        }
+        
+        function updateMessageCount() {
+            const messageCount = document.querySelectorAll('.message').length;
+            document.getElementById('messageCount').textContent = messageCount;
+        }
+        
+        async function refreshMessages() {
+            try {
+                const response = await fetch('/get_messages');
+                const data = await response.json();
+                
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = '';
+                
+                data.messages.forEach(msg => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${msg.type}`;
+                    
+                    let rawDataHtml = '';
+                    if (msg.raw_data) {
+                        const rawDataDisplay = showRawData ? 'block' : 'none';
+                        rawDataHtml = `
+                            <div class="raw-data" style="display: ${rawDataDisplay};">
+                                <strong>Raw Response:</strong><br>
+                                <pre>${JSON.stringify(msg.raw_data, null, 2)}</pre>
+                            </div>
+                        `;
+                    }
+                    
+                    messageDiv.innerHTML = `
+                        <div class="message-header">
+                            <strong>${msg.username}</strong> - ${msg.timestamp}
+                        </div>
+                        <div class="message-text">${msg.message}</div>
+                        ${rawDataHtml}
+                    `;
+                    
+                    chatMessages.appendChild(messageDiv);
+                });
+                
+                // Aktualizace počítadla zpráv
+                document.getElementById('messageCount').textContent = data.messages.length;
+                
+                smartScroll();
+            } catch (error) {
+                console.error('Chyba při načítání zpráv:', error);
+            }
+        }
+        
+        function scrollToBottom() {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTo({
+                top: chatMessages.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Kontrola, zda je uživatel na konci chatu
+        function isScrolledToBottom() {
+            const chatMessages = document.getElementById('chatMessages');
+            return chatMessages.scrollTop + chatMessages.clientHeight >= chatMessages.scrollHeight - 10;
+        }
+        
+        // Auto-scroll pouze pokud je uživatel na konci
+        function smartScroll() {
+            if (isScrolledToBottom()) {
+                scrollToBottom();
+            }
+        }
+        
+        async function clearChat() {
+            if (confirm('Opravdu chcete vymazat celý chat?')) {
+                try {
+                    await fetch('/clear_chat', { method: 'POST' });
+                    await refreshMessages();
+                } catch (error) {
+                    alert('Chyba při mazání chatu: ' + error.message);
+                }
+            }
+        }
+        
+        function toggleRawData() {
+            showRawData = !showRawData;
+            const rawDataElements = document.querySelectorAll('.raw-data');
+            rawDataElements.forEach(element => {
+                element.style.display = showRawData ? 'block' : 'none';
+            });
+        }
+        
+        // Dark Mode Functions
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            // Update theme icon
+            const themeIcon = document.getElementById('themeIcon');
+            themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+            
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Update theme icon
+            const themeIcon = document.getElementById('themeIcon');
+            themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+            if (!localStorage.getItem('theme')) {
+                const newTheme = e.matches ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                const themeIcon = document.getElementById('themeIcon');
+                themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            }
+        });
+        
+        // Initialize theme on page load
+        loadTheme();
+        
+        // Fokus na input při načtení stránky
+        document.getElementById('messageInput').focus();
+        
+        // Scroll na konec při načtení
+        scrollToBottom();
+        
+        // Automatické refreshování každých 5 sekund (volitelné)
+        // setInterval(refreshMessages, 5000);
+    </script>
+</body>
+</html>
