@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  flask:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: flask-translate-audio:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - flask_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+    restart: always
+    cpus: 2.0
+
+volumes:
+  flask_data:
+    driver: local
